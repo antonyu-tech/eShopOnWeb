@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
@@ -27,7 +28,7 @@ public class OrderService : IOrderService
         _itemRepository = itemRepository;
     }
 
-    public async Task CreateOrderAsync(int basketId, Address shippingAddress)
+    public async Task<Order> CreateOrderAsync(int basketId, Address shippingAddress)
     {
         var basketSpec = new BasketWithItemsSpecification(basketId);
         var basket = await _basketRepository.GetBySpecAsync(basketSpec);
@@ -48,6 +49,7 @@ public class OrderService : IOrderService
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
 
-        await _orderRepository.AddAsync(order);
+        Order orderResult =  await _orderRepository.AddAsync(order);
+        return orderResult;
     }
 }

@@ -7,6 +7,8 @@ using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Identity;
 using Microsoft.eShopWeb.Web.Interfaces;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace Microsoft.eShopWeb.Web.Pages.Basket;
 
@@ -19,18 +21,21 @@ public class CheckoutModel : PageModel
     private string? _username = null;
     private readonly IBasketViewModelService _basketViewModelService;
     private readonly IAppLogger<CheckoutModel> _logger;
+    static readonly HttpClient client = new HttpClient();
+    private readonly IConfiguration _config;
 
     public CheckoutModel(IBasketService basketService,
         IBasketViewModelService basketViewModelService,
         SignInManager<ApplicationUser> signInManager,
         IOrderService orderService,
-        IAppLogger<CheckoutModel> logger)
+        IAppLogger<CheckoutModel> logger, IConfiguration config)
     {
         _basketService = basketService;
         _signInManager = signInManager;
         _orderService = orderService;
         _basketViewModelService = basketViewModelService;
         _logger = logger;
+        _config = config;
     }
 
     public BasketViewModel BasketModel { get; set; } = new BasketViewModel();
@@ -53,7 +58,36 @@ public class CheckoutModel : PageModel
 
             var updateModel = items.ToDictionary(b => b.Id.ToString(), b => b.Quantity);
             await _basketService.SetQuantities(BasketModel.Id, updateModel);
-            await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
+            ApplicationCore.Entities.OrderAggregate.Order order = await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
+            string azureFunctionUrl = _config.GetValue(typeof(string), "OrderAzureFunctionUrl") as string;
+            string functionKeys = _config.GetValue(typeof(string), "OrderAzureFunctionKeys") as string;
+            using (var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json"))
+            {
+                try
+                {
+                    //HttpResponseMessage response = await client.PostAsync($"{azureFunctionUrl}?orderId={order.Id}", content);
+                    var HttpRequestMessage = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Post,
+                        RequestUri = new Uri($"{azureFunctionUrl}?orderId={order.Id}"),
+                        Headers =
+                        {
+                            { "x-functions-key", functionKeys }
+                        },
+                        Content = content
+                    };
+
+                    var response = await client.SendAsync(HttpRequestMessage);
+
+                    string result = response.Content.ReadAsStringAsync().Result;
+                }
+                catch(Exception ex)
+                {
+                    _logger.LogWarning(ex.Message);
+                    return RedirectToPage("/Basket/Index");
+                }
+            }
+
             await _basketService.DeleteBasketAsync(BasketModel.Id);
         }
         catch (EmptyBasketOnCheckoutException emptyBasketOnCheckoutException)
