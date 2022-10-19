@@ -1,0 +1,8 @@
+{
+    "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=eshopfunctions2022093020;AccountKey=AtgPR87VM02T2Qz/B8RQ91TeTA6JnKHC+Hf90d3xWEsLL+R8CFM8lK02hMDORAR7/rSS0aNt/WoP+AStToO3MA==;EndpointSuffix=core.windows.net",
+    "AzureCosmosDBConnectionString": "AccountEndpoint=https://eshoponweb-account.documents.azure.com:443/;AccountKey=mWN29l8WjZXmyqLBSk71kxQtpILeRyDK3LSA3cnbEjvbR6oPmQk87QVvfFEeK2sJuQlbebuf8qn5pLUbEaShPw==;",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+  }
+}
