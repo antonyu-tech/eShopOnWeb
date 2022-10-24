@@ -40,7 +40,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorShared", "src\BlazorS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PublicApiIntegrationTests", "tests\PublicApiIntegrationTests\PublicApiIntegrationTests.csproj", "{D53EF010-8F8C-4337-A059-456E19D8AE63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eShopFunctions", "src\eShopFunctions\eShopFunctions.csproj", "{2BA40B8B-C4AF-411E-A9D3-1727D28EC0B5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eShopFunctions", "src\eShopFunctions\eShopFunctions.csproj", "{2BA40B8B-C4AF-411E-A9D3-1727D28EC0B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure.Messaging.ServiceBus;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -9,6 +10,8 @@ using Microsoft.eShopWeb.Infrastructure.Identity;
 using Microsoft.eShopWeb.Web.Interfaces;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using static System.Net.Mime.MediaTypeNames;
+
 
 namespace Microsoft.eShopWeb.Web.Pages.Basket;
 
@@ -59,7 +62,7 @@ public class CheckoutModel : PageModel
             var updateModel = items.ToDictionary(b => b.Id.ToString(), b => b.Quantity);
             await _basketService.SetQuantities(BasketModel.Id, updateModel);
             ApplicationCore.Entities.OrderAggregate.Order order = await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
-            string azureFunctionUrl = _config.GetValue(typeof(string), "OrderAzureFunctionUrl") as string;
+            /*string azureFunctionUrl = _config.GetValue(typeof(string), "OrderAzureFunctionUrl") as string;
             string functionKeys = _config.GetValue(typeof(string), "OrderAzureFunctionKeys") as string;
             using (var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json"))
             {
@@ -86,6 +89,10 @@ public class CheckoutModel : PageModel
                     _logger.LogWarning(ex.Message);
                     return RedirectToPage("/Basket/Index");
                 }
+            }*/
+            if (! await SendOrderToFunctionServiceBus(order)) //SendOrderToFunctionUrl(order))
+            {
+                RedirectToPage("/Basket/Index");
             }
 
             await _basketService.DeleteBasketAsync(BasketModel.Id);
@@ -98,6 +105,69 @@ public class CheckoutModel : PageModel
         }
 
         return RedirectToPage("Success");
+    }
+
+    private async Task<bool> SendOrderToFunctionUrl(ApplicationCore.Entities.OrderAggregate.Order order)
+    {
+        string azureFunctionUrl = _config.GetValue(typeof(string), "OrderAzureFunctionUrl") as string;
+        string functionKeys = _config.GetValue(typeof(string), "OrderAzureFunctionKeys") as string;
+        using (var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json"))
+        {
+            try
+            {
+                //HttpResponseMessage response = await client.PostAsync($"{azureFunctionUrl}?orderId={order.Id}", content);
+                var HttpRequestMessage = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = new Uri($"{azureFunctionUrl}?orderId={order.Id}"),
+                    Headers =
+                        {
+                            { "x-functions-key", functionKeys }
+                        },
+                    Content = content
+                };
+
+                var response = await client.SendAsync(HttpRequestMessage);
+
+                string result = response.Content.ReadAsStringAsync().Result;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex.Message);
+                return false;
+            }
+        }
+    }
+
+    private async Task<bool> SendOrderToFunctionServiceBus(ApplicationCore.Entities.OrderAggregate.Order order)
+    {
+        string serviceBusConnectionString = _config.GetValue(typeof(string), "servicebusconnectionstr") as string;
+        string queueName = "ordermessages1";
+        
+        await using var client = new ServiceBusClient(serviceBusConnectionString);
+
+        await using ServiceBusSender sender = client.CreateSender(queueName);
+        try
+        {
+            string messageBody = JsonConvert.SerializeObject(order);
+            var message = new ServiceBusMessage(messageBody);
+            Console.WriteLine($"Sending message: {messageBody}");
+            await sender.SendMessageAsync(message);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{DateTime.Now} :: Exception: {exception.Message}");
+            return false;
+        }
+        finally
+        {
+            // Calling DisposeAsync on client types is required to ensure that network
+            // resources and other unmanaged objects are properly cleaned up.
+            await sender.DisposeAsync();
+            await client.DisposeAsync();
+        }
     }
 
     private async Task SetBasketModelAsync()
