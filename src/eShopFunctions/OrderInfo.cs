@@ -36,17 +36,7 @@ namespace eShopFunctions
             string orderId = req.Query["orderId"];
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            //dynamic data = JsonConvert.DeserializeObject(requestBody);
-            //name = name ?? data?.name;
             
-            /*var storageConnection = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
-            BlobServiceClient blobServiceClient = new BlobServiceClient(storageConnection);
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("orders");
-            await containerClient.CreateIfNotExistsAsync();
-            BlobClient blobClient = containerClient.GetBlobClient(orderId);
-            await blobClient.UploadAsync(new BinaryData(requestBody));*/
-
-
             //CosmosDB save
             var container = cosmosClient.GetContainer("eShopOrderDB", "OrderInfo");
             CosmosOrder data = JsonConvert.DeserializeObject<CosmosOrder>(requestBody);

@@ -62,35 +62,11 @@ public class CheckoutModel : PageModel
             var updateModel = items.ToDictionary(b => b.Id.ToString(), b => b.Quantity);
             await _basketService.SetQuantities(BasketModel.Id, updateModel);
             ApplicationCore.Entities.OrderAggregate.Order order = await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
-            /*string azureFunctionUrl = _config.GetValue(typeof(string), "OrderAzureFunctionUrl") as string;
-            string functionKeys = _config.GetValue(typeof(string), "OrderAzureFunctionKeys") as string;
-            using (var content = new StringContent(JsonConvert.SerializeObject(order), System.Text.Encoding.UTF8, "application/json"))
-            {
-                try
-                {
-                    //HttpResponseMessage response = await client.PostAsync($"{azureFunctionUrl}?orderId={order.Id}", content);
-                    var HttpRequestMessage = new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Post,
-                        RequestUri = new Uri($"{azureFunctionUrl}?orderId={order.Id}"),
-                        Headers =
-                        {
-                            { "x-functions-key", functionKeys }
-                        },
-                        Content = content
-                    };
+           
+            var sbSendResult = await SendOrderToFunctionServiceBus(order);
+            var weburlSendResult = await SendOrderToFunctionUrl(order);
 
-                    var response = await client.SendAsync(HttpRequestMessage);
-
-                    string result = response.Content.ReadAsStringAsync().Result;
-                }
-                catch(Exception ex)
-                {
-                    _logger.LogWarning(ex.Message);
-                    return RedirectToPage("/Basket/Index");
-                }
-            }*/
-            if (! await SendOrderToFunctionServiceBus(order)) //SendOrderToFunctionUrl(order))
+            if (!sbSendResult && !weburlSendResult)
             {
                 RedirectToPage("/Basket/Index");
             }

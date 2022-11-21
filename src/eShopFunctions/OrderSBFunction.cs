@@ -21,27 +21,6 @@ namespace eShopFunctions
         {
             log.LogInformation($"C# ServiceBus queue trigger function processed message: {myQueueItem}");
 
-            /*var client = new ServiceBusClient(ServiceBusConnectionString);
-
-            var processorOptions = new ServiceBusProcessorOptions
-            {
-                MaxConcurrentCalls = 1,
-                AutoCompleteMessages = false
-            };
-
-            await using ServiceBusProcessor processor = client.CreateProcessor(QueueName, processorOptions);
-
-            processor.ProcessMessageAsync += MessageHandler;
-            processor.ProcessErrorAsync += ErrorHandler;
-
-
-            await processor.StartProcessingAsync();
-
-            Console.Read();
-
-            await processor.CloseAsync();*/
-
-
             try
             {
                 CosmosOrder data = JsonConvert.DeserializeObject<CosmosOrder>(myQueueItem);
